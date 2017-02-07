@@ -25,5 +25,8 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     compile 'com.android.support:appcompat-v7:24.2.1'
+    compile "io.vertx:vertx-core:$version"
+    compile 'io.vertx:vertx-web:3.3.3'
+    compile 'com.rabbitmq:amqp-client:3.6.5'
     testCompile 'junit:junit:4.12'
 }
