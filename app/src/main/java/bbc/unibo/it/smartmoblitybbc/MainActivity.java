@@ -4,14 +4,20 @@ package bbc.unibo.it.smartmoblitybbc;
         import android.os.Bundle;
         import android.os.Handler;
         import android.os.Message;
+        import android.support.design.widget.FloatingActionButton;
         import android.support.v4.app.FragmentTransaction;
         import android.support.v7.app.AppCompatActivity;
         import android.util.Log;
+        import android.view.View;
+        import android.view.animation.AlphaAnimation;
+        import android.view.animation.Animation;
+        import android.widget.Button;
         import android.widget.Toast;
 
         import com.google.android.gms.maps.GoogleMap;
         import com.google.android.gms.maps.OnMapReadyCallback;
         import com.google.android.gms.maps.SupportMapFragment;
+        import com.google.android.gms.maps.model.BitmapDescriptorFactory;
         import com.google.android.gms.maps.model.LatLng;
         import com.google.android.gms.maps.model.Marker;
         import com.google.android.gms.maps.model.MarkerOptions;
@@ -28,14 +34,18 @@ package bbc.unibo.it.smartmoblitybbc;
         import java.io.IOException;
         import java.io.UnsupportedEncodingException;
         import java.util.ArrayList;
+        import java.util.HashSet;
         import java.util.List;
         import java.util.concurrent.TimeoutException;
 
         import bbc.unibo.it.smartmoblitybbc.model.Coordinates;
+        import bbc.unibo.it.smartmoblitybbc.model.InfrastructureNode;
         import bbc.unibo.it.smartmoblitybbc.model.InfrastructureNodeImpl;
+        import bbc.unibo.it.smartmoblitybbc.model.NodePath;
         import bbc.unibo.it.smartmoblitybbc.model.Pair;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.ICoordinates;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNode;
+        import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNodeImpl;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.INodePath;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ICongestionAlarmMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IPathAckMsg;
@@ -51,7 +61,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.utils.mom.MomUtils;
 
 public class MainActivity extends AppCompatActivity implements
-        GoogleMap.OnMarkerClickListener,
+        GoogleMap.OnMapClickListener,
         OnMapReadyCallback {
 
 
@@ -66,28 +76,23 @@ public class MainActivity extends AppCompatActivity implements
     private InfrastructureNodeImpl end;
     private int currentIndex;
     private long timerValue;
-
-
-
-
-
-
-
     private static final LatLng PERTH = new LatLng(-31.952854, 115.857342);
     private static final LatLng SYDNEY = new LatLng(-33.87365, 151.20689);
     private static final LatLng BRISBANE = new LatLng(-27.47093, 153.0235);
-
+    private int pointsCounter = 0;
     private Marker mPerth;
     private Marker mSydney;
     private Marker mBrisbane;
+    private static final float colorsArray[] = {BitmapDescriptorFactory.HUE_AZURE, BitmapDescriptorFactory.HUE_GREEN,
+            BitmapDescriptorFactory.HUE_MAGENTA, BitmapDescriptorFactory.HUE_YELLOW, BitmapDescriptorFactory.HUE_ORANGE};
 
     private GoogleMap mMap;
+    private FloatingActionButton buttonStart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         SupportMapFragment mapFragment = new SupportMapFragment();
         transaction.add(R.id.frameMap, mapFragment);
@@ -99,9 +104,29 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onMapReady(GoogleMap map) {
         mMap = map;
+        mMap.setOnMapClickListener(this);
+        FloatingActionButton buttonCancel = (FloatingActionButton) findViewById(R.id.resetButton);
+        buttonCancel.setOnClickListener(v -> {
+            mMap.clear();
+            pointsCounter = 0;
+            this.buttonStart.setVisibility(View.GONE);
+        });
+        buttonStart = (FloatingActionButton) findViewById(R.id.startButton);
+        buttonStart.setOnClickListener(v -> {
+            //TODO send request to server
+            try {
+                handleResponsePathMsg("");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
+        });
 
         // Add some markers to the map, and add a data object to each marker.
-        mPerth = mMap.addMarker(new MarkerOptions()
+       /* mPerth = mMap.addMarker(new MarkerOptions()
                 .position(PERTH)
                 .title("Perth"));
         mPerth.setTag(0);
@@ -117,31 +142,7 @@ public class MainActivity extends AppCompatActivity implements
         mBrisbane.setTag(0);
 
         // Set a listener for marker click.
-        mMap.setOnMarkerClickListener(this);
-    }
-
-    /** Called when the user clicks a marker. */
-    @Override
-    public boolean onMarkerClick(final Marker marker) {
-
-        // Retrieve the data from the marker.
-        Integer clickCount = (Integer) marker.getTag();
-
-        // Check if a click count was set, then display the click count.
-        if (clickCount != null) {
-            clickCount = clickCount + 1;
-            marker.setTag(clickCount);
-
-            Toast.makeText(this,
-                    marker.getTitle() +
-                            " has been clicked " + clickCount + " times.",
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        // Return false to indicate that we have not consumed the event and that we wish
-        // for the default behavior to occur (which is for the camera to move such that the
-        // marker is centered and for the marker's info window to open, if it has one).
-        return false;
+        mMap.setOnMarkerClickListener(this);*/
     }
 
     private Channel initChannel() throws IOException, TimeoutException {
@@ -259,15 +260,70 @@ public class MainActivity extends AppCompatActivity implements
     private void handleResponsePathMsg(String msg)
             throws JSONException, UnsupportedEncodingException, IOException, TimeoutException {
         System.out.println(msg);
-        IResponsePathMsg message = JSONMessagingUtils.getResponsePathMsgFromString(msg);
+        /*IResponsePathMsg message = JSONMessagingUtils.getResponsePathMsgFromString(msg);
         List<INodePath> paths;
-        paths = message.getPaths();
-        this.userID = message.getUserID();
-        this.brokerAddress = message.getBrokerAddress();
+        paths = message.getPaths();*/
+
+
+
+
+
+        IInfrastructureNode node = new InfrastructureNode("id1");
+        node.setCoordinates(new Coordinates(44.136940,12.242621));
+        IInfrastructureNode node1 = new InfrastructureNode("id2");
+        node1.setCoordinates(new Coordinates(44.138056,12.243367));
+        IInfrastructureNode node2 = new InfrastructureNode("id3");
+        node2.setCoordinates(new Coordinates(44.138643,12.243445));
+        IInfrastructureNode node3 = new InfrastructureNode("id4");
+        node3.setCoordinates(new Coordinates(44.139483,12.243859));
+        IInfrastructureNode node4 = new InfrastructureNode("id5");
+        node4.setCoordinates(new Coordinates(44.139533,12.243398));
+        IInfrastructureNode node5 = new InfrastructureNode("id6");
+        node5.setCoordinates(new Coordinates(44.137584,12.241318));
+        IInfrastructureNode node6 = new InfrastructureNode("id7");
+        node6.setCoordinates(new Coordinates(44.137734,12.241392));
+        IInfrastructureNode node7 = new InfrastructureNode("id8");
+        node7.setCoordinates(new Coordinates(44.138072,12.241626));
+        IInfrastructureNode node8 = new InfrastructureNode("id9");
+        node8.setCoordinates(new Coordinates(44.138051,12.242285));
+        IInfrastructureNode node9 = new InfrastructureNode("id10");
+        node9.setCoordinates(new Coordinates(44.138254,12.242317));
+        IInfrastructureNode node10 = new InfrastructureNode("id11");
+        node10.setCoordinates(new Coordinates(44.138868,12.242320));
+        IInfrastructureNode node11 = new InfrastructureNode("id12");
+        node11.setCoordinates(new Coordinates(44.139643,12.242515));
+        ArrayList<IInfrastructureNode> list = new ArrayList<>();
+        list.add(node);
+        list.add(node1);
+        list.add(node2);
+        list.add(node3);
+        list.add(node4);
+        INodePath path = new NodePath(list);
+        ArrayList<IInfrastructureNode> list2 = new ArrayList<>();
+        list2.add(node);
+        list2.add(node5);
+        list2.add(node6);
+        list2.add(node7);
+        list2.add(node8);
+        list2.add(node9);
+        list2.add(node10);
+        list2.add(node11);
+        INodePath path2 = new NodePath(list2);
+        List<INodePath> paths = new ArrayList<>();
+        paths.add(path);
+        paths.add(path2);
+
+
+
+
+
+        /*this.userID = message.getUserID();
+        this.brokerAddress = message.getBrokerAddress();*/
         for (int j = 0; j < paths.size(); j++) {
-            this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
+            //this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
+            drawMarkersForPath(paths.get(j), colorsArray[j%5]);
         }
-        for (int i = 0; i < paths.size(); i++) {
+        /*for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
             String toSend = JSONMessagingUtils.getStringfromRequestTravelTimeMsg(requestMsg);
@@ -276,7 +332,7 @@ public class MainActivity extends AppCompatActivity implements
         List<IInfrastructureNode> path = new ArrayList<>();
         path.add(this.start);
         path.add(this.end);
-        this.chosenPath.setPath(path);
+        this.chosenPath.setPath(path);*/
     }
 
     private void handleResponseTravelTimeMsg(String msg) throws JSONException {
@@ -287,6 +343,35 @@ public class MainActivity extends AppCompatActivity implements
             System.out.println("Frozen Danger on path number "+message.getTravelID());
         }
         this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
+    }
+
+    private void drawMarkersForPath(INodePath path, float color){
+        for(IInfrastructureNode node : path.getPathNodes()){
+            LatLng coord = new LatLng(node.getCoordinates().getLatitude(), node.getCoordinates().getLongitude());
+            mMap.addMarker(new MarkerOptions()
+                    .position(coord)
+                    .icon(BitmapDescriptorFactory.defaultMarker(color)));
+        }
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        if(pointsCounter==0){
+            mMap.addMarker(new MarkerOptions()
+                    .position(latLng)
+                    .title("Start"));
+            this.start = new InfrastructureNodeImpl("start", new HashSet<>());
+            this.start.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
+            pointsCounter = 1;
+        } else if(pointsCounter==1){
+            mMap.addMarker(new MarkerOptions()
+                    .position(latLng)
+                    .title("End"));
+            this.end = new InfrastructureNodeImpl("end", new HashSet<>());
+            this.end.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
+            pointsCounter = 2;
+            this.buttonStart.setVisibility(View.VISIBLE);
+        }
     }
 
     /*private void requestCoordinates(){
