@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "24.0.3"
+    buildToolsVersion "25.0.2"
     defaultConfig {
         applicationId "bbc.unibo.it.smartmoblitybbc"
         minSdkVersion 19
@@ -44,7 +44,7 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     //compile 'com.android.support:appcompat-v7:24.2.1'
-    //compile 'io.vertx:vertx-web:3.3.3'
+    //compile
     compile 'com.rabbitmq:amqp-client:3.6.5'
     testCompile 'junit:junit:4.12'
     compile 'com.google.android.gms:play-services-maps:10.0.1'

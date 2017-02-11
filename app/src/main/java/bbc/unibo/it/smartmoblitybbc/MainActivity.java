@@ -1,6 +1,7 @@
 package bbc.unibo.it.smartmoblitybbc;
 
         import android.location.Location;
+        import android.os.AsyncTask;
         import android.os.Bundle;
         import android.os.Handler;
         import android.os.Message;
@@ -9,10 +10,6 @@ package bbc.unibo.it.smartmoblitybbc;
         import android.support.v7.app.AppCompatActivity;
         import android.util.Log;
         import android.view.View;
-        import android.view.animation.AlphaAnimation;
-        import android.view.animation.Animation;
-        import android.widget.Button;
-        import android.widget.Toast;
 
         import com.google.android.gms.maps.GoogleMap;
         import com.google.android.gms.maps.OnMapReadyCallback;
@@ -45,17 +42,16 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.model.Pair;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.ICoordinates;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNode;
-        import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNodeImpl;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.INodePath;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ICongestionAlarmMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IPathAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IRequestPathMsg;
-        import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IRequestTravelTimeMsg;
-        import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IResponsePathMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IResponseTravelTimeMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ITravelTimeAckMsg;
-        import bbc.unibo.it.smartmoblitybbc.model.msg.RequestTravelTimeMsg;
+        import bbc.unibo.it.smartmoblitybbc.model.msg.PathAckMsg;
+        import bbc.unibo.it.smartmoblitybbc.model.msg.RequestPathMsg;
         import bbc.unibo.it.smartmoblitybbc.model.msg.TravelTimeAckMsg;
+        import bbc.unibo.it.smartmoblitybbc.utils.http.HttpUtils;
         import bbc.unibo.it.smartmoblitybbc.utils.json.JSONMessagingUtils;
         import bbc.unibo.it.smartmoblitybbc.utils.messaging.MessagingUtils;
         import bbc.unibo.it.smartmoblitybbc.utils.mom.MomUtils;
@@ -155,8 +151,8 @@ public class MainActivity extends AppCompatActivity implements
         return channel;
     }
 
-    /*private void requestPaths(IInfrastructureNode start, IInfrastructureNode end) {
-        Vertx vertx = Vertx.vertx();
+    private void requestPaths(IInfrastructureNode start, IInfrastructureNode end) {
+        /*Vertx vertx = Vertx.vertx();
         HttpClient client = vertx.createHttpClient();
         client.websocket(8080, "localhost", "/some-uri", ws -> {
             ws.handler(data -> {
@@ -174,8 +170,26 @@ public class MainActivity extends AppCompatActivity implements
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        });
-    }*/
+        });*/
+        new AsyncTask<Void,Void,Void>(){
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, start, end);
+                try {
+                    String requestPathString = JSONMessagingUtils.getStringfromRequestPathMsg(requestMsg);
+                    handleResponsePathMsg(HttpUtils.POST(requestPathString));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (TimeoutException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        };
+    }
 
     private INodePath evaluateBestPath() {
         int min = Integer.MAX_VALUE;
@@ -374,8 +388,8 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    /*private void requestCoordinates(){
-        Vertx vertx = Vertx.vertx();
+    private void requestCoordinates(){
+        /*Vertx vertx = Vertx.vertx();
         HttpClient client = vertx.createHttpClient();
 
         client.websocket(8080, "localhost", "/some-uri", ws -> {
@@ -394,8 +408,28 @@ public class MainActivity extends AppCompatActivity implements
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        });
-    }*/
+        });*/
+        new AsyncTask<Void,Void,Void>(){
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                IPathAckMsg pathAckMsg = new PathAckMsg(userID, MessagingUtils.PATH_ACK, chosenPath, travelID);
+                try {
+                    String pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
+                    handleResponsePathMsg(HttpUtils.POST(pathAckString));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (TimeoutException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        };
+    }
 
 
     public class GPSServiceHandler extends Handler {
