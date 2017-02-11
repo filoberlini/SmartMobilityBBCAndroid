@@ -50,6 +50,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ITravelTimeAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.msg.PathAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.msg.RequestPathMsg;
+        import bbc.unibo.it.smartmoblitybbc.model.msg.RequestTravelTimeMsg;
         import bbc.unibo.it.smartmoblitybbc.model.msg.TravelTimeAckMsg;
         import bbc.unibo.it.smartmoblitybbc.utils.http.HttpUtils;
         import bbc.unibo.it.smartmoblitybbc.utils.json.JSONMessagingUtils;
@@ -206,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements
                 bestPath = p.getFirst();
             }
         }
+        this.travelID = minTravelID;
         return bestPath;
     }
 
@@ -266,6 +268,8 @@ public class MainActivity extends AppCompatActivity implements
     private void handlePathAckMsg(String msg) throws JSONException {
         IPathAckMsg message = JSONMessagingUtils.getPathAckWithCoordinatesMsgFromString(msg);
         this.chosenPath = message.getPath();
+        mMap.clear();
+        drawMarkersForPath(this.chosenPath, colorsArray[4]);
         /*GpsMock gps = new GpsMock(this.chosenPath, new ArrayList<>());  //TODO: we have to find a way to create a mock path with mock times
         gps.attachObserver(this);
         gps.start();*/
@@ -274,15 +278,15 @@ public class MainActivity extends AppCompatActivity implements
     private void handleResponsePathMsg(String msg)
             throws JSONException, UnsupportedEncodingException, IOException, TimeoutException {
         System.out.println(msg);
-        /*IResponsePathMsg message = JSONMessagingUtils.getResponsePathMsgFromString(msg);
+        IResponsePathMsg message = JSONMessagingUtils.getResponsePathMsgFromString(msg);
         List<INodePath> paths;
-        paths = message.getPaths();*/
+        paths = message.getPaths();
 
 
 
 
 
-        IInfrastructureNode node = new InfrastructureNode("id1");
+        /*IInfrastructureNode node = new InfrastructureNode("id1");
         node.setCoordinates(new Coordinates(44.136940,12.242621));
         IInfrastructureNode node1 = new InfrastructureNode("id2");
         node1.setCoordinates(new Coordinates(44.138056,12.243367));
@@ -325,25 +329,25 @@ public class MainActivity extends AppCompatActivity implements
         INodePath path2 = new NodePath(list2);
         List<INodePath> paths = new ArrayList<>();
         paths.add(path);
-        paths.add(path2);
+        paths.add(path2);*/
 
 
 
 
 
-        /*this.userID = message.getUserID();
-        this.brokerAddress = message.getBrokerAddress();*/
+        this.userID = message.getUserID();
+        this.brokerAddress = message.getBrokerAddress();
         for (int j = 0; j < paths.size(); j++) {
             //this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
             drawMarkersForPath(paths.get(j), colorsArray[j%5]);
         }
-        /*for (int i = 0; i < paths.size(); i++) {
+        for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
             String toSend = JSONMessagingUtils.getStringfromRequestTravelTimeMsg(requestMsg);
             MomUtils.sendMsg(factory, userID, toSend);
         }
-        List<IInfrastructureNode> path = new ArrayList<>();
+        /*List<IInfrastructureNode> path = new ArrayList<>();
         path.add(this.start);
         path.add(this.end);
         this.chosenPath.setPath(path);*/
@@ -357,6 +361,21 @@ public class MainActivity extends AppCompatActivity implements
             System.out.println("Frozen Danger on path number "+message.getTravelID());
         }
         this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
+        if(this.travelTimes.size()==this.pathsWithTravelID.size()){
+            this.chosenPath = this.evaluateBestPath();
+            //this.requestCoordinates();
+            try {
+                this.sendAckToNode();
+            } catch (IOException | TimeoutException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void sendAckToNode() throws JSONException, UnsupportedEncodingException, IOException, TimeoutException{
+        IPathAckMsg ackMsgToNode = new PathAckMsg(this.userID, MessagingUtils.PATH_ACK, this.chosenPath, this.travelID);
+        String ackToSend = JSONMessagingUtils.getStringfromPathAckMsg(ackMsgToNode);
+        MomUtils.sendMsg(this.factory, this.chosenPath.getPathNodes().get(0).getNodeID(), ackToSend);
     }
 
     private void drawMarkersForPath(INodePath path, float color){
@@ -372,15 +391,13 @@ public class MainActivity extends AppCompatActivity implements
     public void onMapClick(LatLng latLng) {
         if(pointsCounter==0){
             mMap.addMarker(new MarkerOptions()
-                    .position(latLng)
-                    .title("Start"));
+                    .position(latLng));
             this.start = new InfrastructureNodeImpl("start", new HashSet<>());
             this.start.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
             pointsCounter = 1;
         } else if(pointsCounter==1){
             mMap.addMarker(new MarkerOptions()
-                    .position(latLng)
-                    .title("End"));
+                    .position(latLng));
             this.end = new InfrastructureNodeImpl("end", new HashSet<>());
             this.end.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
             pointsCounter = 2;
@@ -441,6 +458,10 @@ public class MainActivity extends AppCompatActivity implements
                 ICoordinates coordinates = new Coordinates(location.getLatitude(), location.getLongitude());
                 if(chosenPath.getPathNodes().get(currentIndex+1).getCoordinates().isCloseEnough(coordinates)){
                     int time = (int) (System.currentTimeMillis()-timerValue);
+                    ICoordinates c = chosenPath.getPathNodes().get(currentIndex+1).getCoordinates();
+                    LatLng latLng = new LatLng(c.getLatitude(), c.getLongitude());
+                    mMap.addMarker(new MarkerOptions().position(latLng)
+                            .icon(BitmapDescriptorFactory.defaultMarker(colorsArray[0])));
                     try {
                         nearNextNode(time);
                     } catch (JSONException | IOException | TimeoutException e) {
@@ -456,5 +477,6 @@ public class MainActivity extends AppCompatActivity implements
                 chosenPath.getPathNodes().get(this.currentIndex), this.chosenPath.getPathNodes().get(this.currentIndex + 1), time);
         String travelTimeAck = JSONMessagingUtils.getStringfromTravelTimeAckMsg(msg);
         MomUtils.sendMsg(this.factory, this.chosenPath.getPathNodes().get(this.currentIndex).getNodeID(), travelTimeAck);
+        this.currentIndex++;
     }
 }
