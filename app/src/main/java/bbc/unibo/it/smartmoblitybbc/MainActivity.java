@@ -46,6 +46,8 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ICongestionAlarmMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IPathAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IRequestPathMsg;
+        import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IRequestTravelTimeMsg;
+        import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IResponsePathMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IResponseTravelTimeMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ITravelTimeAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.msg.PathAckMsg;
