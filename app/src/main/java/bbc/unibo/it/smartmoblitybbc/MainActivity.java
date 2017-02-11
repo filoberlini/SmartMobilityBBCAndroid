@@ -42,6 +42,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.model.Pair;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.ICoordinates;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNode;
+        import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNodeImpl;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.INodePath;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ICongestionAlarmMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IPathAckMsg;
@@ -95,6 +96,8 @@ public class MainActivity extends AppCompatActivity implements
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         SupportMapFragment mapFragment = new SupportMapFragment();
         transaction.add(R.id.frameMap, mapFragment);
+        this.chosenPath = new NodePath(new ArrayList<IInfrastructureNode>());
+        this.pathsWithTravelID = new ArrayList<>();
         transaction.commit();
         mapFragment.getMapAsync(this);
     }
@@ -105,24 +108,26 @@ public class MainActivity extends AppCompatActivity implements
         mMap = map;
         mMap.setOnMapClickListener(this);
         FloatingActionButton buttonCancel = (FloatingActionButton) findViewById(R.id.resetButton);
-        buttonCancel.setOnClickListener(v -> {
-            mMap.clear();
-            pointsCounter = 0;
-            this.buttonStart.setVisibility(View.GONE);
-        });
+        buttonCancel.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                mMap.clear();
+                                                pointsCounter = 0;
+                                                buttonStart.setVisibility(View.GONE);
+                                            }
+                                        }
+
+        );
         buttonStart = (FloatingActionButton) findViewById(R.id.startButton);
-        buttonStart.setOnClickListener(v -> {
-            //TODO send request to server
-            try {
-                handleResponsePathMsg("");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (TimeoutException e) {
-                e.printStackTrace();
-            }
-        });
+        buttonStart.setOnClickListener(new View.OnClickListener() {
+                                           @Override
+                                           public void onClick(View v) {
+                                               //TODO send request to server
+                                               requestPaths(new InfrastructureNode("id1"), new InfrastructureNode("id3"));
+                                           }
+                                       }
+
+        );
 
         // Add some markers to the map, and add a data object to each marker.
        /* mPerth = mMap.addMarker(new MarkerOptions()
@@ -154,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements
         return channel;
     }
 
-    private void requestPaths(IInfrastructureNode start, IInfrastructureNode end) {
+    private void requestPaths(final IInfrastructureNode start, final IInfrastructureNode end) {
         /*Vertx vertx = Vertx.vertx();
         HttpClient client = vertx.createHttpClient();
         client.websocket(8080, "localhost", "/some-uri", ws -> {
@@ -178,6 +183,7 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             protected Void doInBackground(Void... voids) {
+                Log.i("","ASYNCH");
                 IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, start, end);
                 try {
                     String requestPathString = JSONMessagingUtils.getStringfromRequestPathMsg(requestMsg);
@@ -191,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements
                 }
                 return null;
             }
-        };
+        }.execute();
     }
 
     private INodePath evaluateBestPath() {
@@ -339,15 +345,16 @@ public class MainActivity extends AppCompatActivity implements
 
         this.userID = message.getUserID();
         this.brokerAddress = message.getBrokerAddress();
+        this.startReceiving();
         for (int j = 0; j < paths.size(); j++) {
-            //this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
+            this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
             drawMarkersForPath(paths.get(j), colorsArray[j%5]);
         }
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
             String toSend = JSONMessagingUtils.getStringfromRequestTravelTimeMsg(requestMsg);
-            MomUtils.sendMsg(factory, userID, toSend);
+            MomUtils.sendMsg(factory, paths.get(i).getPathNodes().get(0).getNodeID(), toSend);
         }
         /*List<IInfrastructureNode> path = new ArrayList<>();
         path.add(this.start);
@@ -365,7 +372,7 @@ public class MainActivity extends AppCompatActivity implements
         this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
         if(this.travelTimes.size()==this.pathsWithTravelID.size()){
             this.chosenPath = this.evaluateBestPath();
-            //this.requestCoordinates();
+            this.requestCoordinates();
             try {
                 this.sendAckToNode();
             } catch (IOException | TimeoutException e) {
@@ -381,12 +388,12 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void drawMarkersForPath(INodePath path, float color){
-        for(IInfrastructureNode node : path.getPathNodes()){
+        /*for(IInfrastructureNode node : path.getPathNodes()){
             LatLng coord = new LatLng(node.getCoordinates().getLatitude(), node.getCoordinates().getLongitude());
             mMap.addMarker(new MarkerOptions()
                     .position(coord)
                     .icon(BitmapDescriptorFactory.defaultMarker(color)));
-        }
+        }*/
     }
 
     @Override
@@ -394,13 +401,13 @@ public class MainActivity extends AppCompatActivity implements
         if(pointsCounter==0){
             mMap.addMarker(new MarkerOptions()
                     .position(latLng));
-            this.start = new InfrastructureNodeImpl("start", new HashSet<>());
+            this.start = new InfrastructureNodeImpl("start", new HashSet<IInfrastructureNodeImpl>());
             this.start.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
             pointsCounter = 1;
         } else if(pointsCounter==1){
             mMap.addMarker(new MarkerOptions()
                     .position(latLng));
-            this.end = new InfrastructureNodeImpl("end", new HashSet<>());
+            this.end = new InfrastructureNodeImpl("end", new HashSet<IInfrastructureNodeImpl>());
             this.end.setCoordinates(new Coordinates(latLng.latitude, latLng.longitude));
             pointsCounter = 2;
             this.buttonStart.setVisibility(View.VISIBLE);
@@ -447,7 +454,7 @@ public class MainActivity extends AppCompatActivity implements
                 }
                 return null;
             }
-        };
+        }.execute();
     }
 
 

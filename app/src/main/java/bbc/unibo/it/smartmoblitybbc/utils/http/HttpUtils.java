@@ -15,7 +15,7 @@ import java.net.URL;
 
 public class HttpUtils {
 
-    private static final String REQUEST = "localhost:8080";
+    private static final String REQUEST = "http://192.168.1.104:8080";
 
     public static String POST(String msg) throws IOException {
         String response = "";
