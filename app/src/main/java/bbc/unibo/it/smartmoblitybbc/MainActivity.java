@@ -98,6 +98,8 @@ public class MainActivity extends AppCompatActivity implements
         transaction.add(R.id.frameMap, mapFragment);
         this.chosenPath = new NodePath(new ArrayList<IInfrastructureNode>());
         this.pathsWithTravelID = new ArrayList<>();
+        this.travelTimes = new ArrayList<>();
+        this.currentIndex = 0;
         transaction.commit();
         mapFragment.getMapAsync(this);
     }
@@ -154,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements
         this.factory.setHost(brokerAddress);
         Connection connection = this.factory.newConnection();
         Channel channel = connection.createChannel();
-        channel.queueDeclare("receiveQueue", false, false, false, null);
+        channel.queueDeclare(this.userID, false, false, false, null);
         System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
         return channel;
     }
@@ -241,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements
         };
 
         try {
-            channel.basicConsume("receiveQueue", true, consumer);
+            channel.basicConsume(this.userID, true, consumer);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -250,6 +252,7 @@ public class MainActivity extends AppCompatActivity implements
     private void switchArrivedMsg(String msg) throws UnsupportedEncodingException, IOException, TimeoutException {
         try {
             int n = MessagingUtils.getIntId(msg);
+            Log.i("> Id "+n, msg);
             switch (n) {
                 case 0:
                     handleCongestionAlarmMsg(msg);
@@ -276,8 +279,8 @@ public class MainActivity extends AppCompatActivity implements
     private void handlePathAckMsg(String msg) throws JSONException {
         IPathAckMsg message = JSONMessagingUtils.getPathAckWithCoordinatesMsgFromString(msg);
         this.chosenPath = message.getPath();
-        mMap.clear();
-        drawMarkersForPath(this.chosenPath, colorsArray[4]);
+        //mMap.clear();
+        //drawMarkersForPath(this.chosenPath, colorsArray[4]);
         /*GpsMock gps = new GpsMock(this.chosenPath, new ArrayList<>());  //TODO: we have to find a way to create a mock path with mock times
         gps.attachObserver(this);
         gps.start();*/
@@ -348,7 +351,7 @@ public class MainActivity extends AppCompatActivity implements
         this.startReceiving();
         for (int j = 0; j < paths.size(); j++) {
             this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
-            drawMarkersForPath(paths.get(j), colorsArray[j%5]);
+            //drawMarkersForPath(paths.get(j), colorsArray[j%5]);
         }
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
@@ -368,13 +371,13 @@ public class MainActivity extends AppCompatActivity implements
         int time = message.getTravelTime();
         if(message.frozenDanger()){
             System.out.println("Frozen Danger on path number "+message.getTravelID());
-        }
-        this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
-        if(this.travelTimes.size()==this.pathsWithTravelID.size()){
-            this.chosenPath = this.evaluateBestPath();
-            this.requestCoordinates();
-            try {
-                this.sendAckToNode();
+            }
+            this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
+            if(this.travelTimes.size()==this.pathsWithTravelID.size()){
+                this.chosenPath = this.evaluateBestPath();
+                this.requestCoordinates();
+                try {
+                    this.sendAckToNode();
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }
@@ -388,12 +391,12 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void drawMarkersForPath(INodePath path, float color){
-        /*for(IInfrastructureNode node : path.getPathNodes()){
+        for(IInfrastructureNode node : path.getPathNodes()){
             LatLng coord = new LatLng(node.getCoordinates().getLatitude(), node.getCoordinates().getLongitude());
             mMap.addMarker(new MarkerOptions()
                     .position(coord)
                     .icon(BitmapDescriptorFactory.defaultMarker(color)));
-        }*/
+        }
     }
 
     @Override
@@ -440,19 +443,24 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             protected Void doInBackground(Void... voids) {
                 IPathAckMsg pathAckMsg = new PathAckMsg(userID, MessagingUtils.PATH_ACK, chosenPath, travelID);
+                String pathAckString = "";
                 try {
-                    String pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
-                    handleResponsePathMsg(HttpUtils.POST(pathAckString));
+
+                    pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
+                    handlePathAckMsg(HttpUtils.POST(pathAckString));
+
                 } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (TimeoutException e) {
-                    e.printStackTrace();
                 }
                 return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                mMap.clear();
+                drawMarkersForPath(chosenPath, colorsArray[4]);
             }
         }.execute();
     }
