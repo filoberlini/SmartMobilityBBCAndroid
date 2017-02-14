@@ -11,6 +11,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import android.util.Log;
         import android.view.View;
 
+        import com.google.android.gms.maps.CameraUpdateFactory;
         import com.google.android.gms.maps.GoogleMap;
         import com.google.android.gms.maps.OnMapReadyCallback;
         import com.google.android.gms.maps.SupportMapFragment;
@@ -44,6 +45,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNode;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.IInfrastructureNodeImpl;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.INodePath;
+        import bbc.unibo.it.smartmoblitybbc.model.interfaces.IPair;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.ICongestionAlarmMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IPathAckMsg;
         import bbc.unibo.it.smartmoblitybbc.model.interfaces.msg.IRequestPathMsg;
@@ -85,7 +87,8 @@ public class MainActivity extends AppCompatActivity implements
     private Marker mBrisbane;
     private static final float colorsArray[] = {BitmapDescriptorFactory.HUE_AZURE, BitmapDescriptorFactory.HUE_GREEN,
             BitmapDescriptorFactory.HUE_MAGENTA, BitmapDescriptorFactory.HUE_YELLOW, BitmapDescriptorFactory.HUE_ORANGE};
-
+    private static final double LAT_CENTER = 43.773663;
+    private static final double LONG_CENTER = -79.401956;
     private GoogleMap mMap;
     private FloatingActionButton buttonStart;
 
@@ -108,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onMapReady(GoogleMap map) {
         mMap = map;
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(LAT_CENTER,LONG_CENTER) , 14.0f) );
         mMap.setOnMapClickListener(this);
         FloatingActionButton buttonCancel = (FloatingActionButton) findViewById(R.id.resetButton);
         buttonCancel.setOnClickListener(new View.OnClickListener() {
@@ -125,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements
                                            @Override
                                            public void onClick(View v) {
                                                //TODO send request to server
-                                               requestPaths(new InfrastructureNode("id1"), new InfrastructureNode("id3"));
+                                               requestPaths(start, end);
                                            }
                                        }
 
@@ -198,6 +202,15 @@ public class MainActivity extends AppCompatActivity implements
                     e.printStackTrace();
                 }
                 return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                int j = 0;
+                for(IPair<INodePath,Integer> pair : pathsWithTravelID){
+                    drawMarkersForPath(pair.getFirst(), colorsArray[j%5]);
+                    j++;
+                }
             }
         }.execute();
     }
@@ -351,7 +364,6 @@ public class MainActivity extends AppCompatActivity implements
         this.startReceiving();
         for (int j = 0; j < paths.size(); j++) {
             this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
-            //drawMarkersForPath(paths.get(j), colorsArray[j%5]);
         }
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
