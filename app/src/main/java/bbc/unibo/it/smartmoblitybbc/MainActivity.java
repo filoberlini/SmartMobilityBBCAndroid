@@ -1,5 +1,6 @@
 package bbc.unibo.it.smartmoblitybbc;
 
+        import android.graphics.Color;
         import android.location.Location;
         import android.os.AsyncTask;
         import android.os.Bundle;
@@ -19,6 +20,8 @@ package bbc.unibo.it.smartmoblitybbc;
         import com.google.android.gms.maps.model.LatLng;
         import com.google.android.gms.maps.model.Marker;
         import com.google.android.gms.maps.model.MarkerOptions;
+        import com.google.android.gms.maps.model.Polyline;
+        import com.google.android.gms.maps.model.PolylineOptions;
         import com.rabbitmq.client.AMQP;
         import com.rabbitmq.client.Channel;
         import com.rabbitmq.client.Connection;
@@ -175,7 +178,6 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             protected Void doInBackground(Void... voids) {
-                Log.i("","ASYNCH");
                 IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, start, end, userID);
                 try {
                     String requestPathString = JSONMessagingUtils.getStringfromRequestPathMsg(requestMsg);
@@ -358,8 +360,6 @@ public class MainActivity extends AppCompatActivity implements
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
-            Log.i("PATH",paths.get(i).toString());
-            paths.get(i).printPath();
             String toSend = JSONMessagingUtils.getStringfromRequestTravelTimeMsg(requestMsg);
             MomUtils.sendMsg(factory, paths.get(i).getPathNodes().get(0).getNodeID(), toSend);
         }
@@ -378,7 +378,6 @@ public class MainActivity extends AppCompatActivity implements
         }
         this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
         if(this.travelTimes.size()==this.pathsWithTravelID.size()){
-            System.out.println("TTIMES");
             this.chosenPath = this.evaluateBestPath();
             this.requestCoordinates();
             try {
@@ -396,12 +395,25 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void drawMarkersForPath(INodePath path, float color){
-        for(IInfrastructureNode node : path.getPathNodes()){
+        /*for(IInfrastructureNode node : path.getPathNodes()){
             LatLng coord = new LatLng(node.getCoordinates().getLatitude(), node.getCoordinates().getLongitude());
             mMap.addMarker(new MarkerOptions()
                     .position(coord)
                     .icon(BitmapDescriptorFactory.defaultMarker(color)));
+        }*/
+        for(int i = 0; i < path.getPathNodes().size()-1; i++){
+            IInfrastructureNode src = path.getPathNodes().get(i);
+            IInfrastructureNode dest = path.getPathNodes().get(i+1);
+            LatLng coord = new LatLng(src.getCoordinates().getLatitude(), src.getCoordinates().getLongitude());
+            mMap.addMarker(new MarkerOptions()
+                    .position(coord)
+                    .icon(BitmapDescriptorFactory.defaultMarker(color)));
+            Polyline line = mMap.addPolyline(new PolylineOptions()
+                    .add(new LatLng(src.getCoordinates().getLatitude(), src.getCoordinates().getLongitude()), new LatLng(dest.getCoordinates().getLatitude(), dest.getCoordinates().getLongitude()))
+                    .width(2)
+                    .color(Color.BLUE).geodesic(true));
         }
+
     }
 
     @Override
@@ -423,7 +435,6 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void requestCoordinates(){
-        System.out.println("REQUEST COORD");
         new AsyncTask<Void,Void,Void>(){
 
             @Override
@@ -434,7 +445,6 @@ public class MainActivity extends AppCompatActivity implements
 
                     pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
                     handlePathAckMsg(HttpUtils.POST(pathAckString));
-                    System.out.println("MESSAGE REC");
                 } catch (JSONException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
@@ -445,7 +455,6 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             protected void onPostExecute(Void aVoid) {
-                Log.i("CLEAR MAP", "");
                 mMap.clear();
                 drawMarkersForPath(chosenPath, colorsArray[4]);
             }
