@@ -91,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements
     private static final double LONG_CENTER = -79.401956;
     private GoogleMap mMap;
     private FloatingActionButton buttonStart;
+    private boolean channelInitialized;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements
         this.travelTimes = new ArrayList<>();
         this.currentIndex = 0;
         this.userID = "newuser";
+        this.channelInitialized = false;
         transaction.commit();
         mapFragment.getMapAsync(this);
     }
@@ -129,7 +131,6 @@ public class MainActivity extends AppCompatActivity implements
         buttonStart.setOnClickListener(new View.OnClickListener() {
                                            @Override
                                            public void onClick(View v) {
-                                               //TODO send request to server
                                                requestPaths(start, end);
                                            }
                                        }
@@ -168,6 +169,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private void requestPaths(final IInfrastructureNode start, final IInfrastructureNode end) {
         this.pathsWithTravelID.clear();
+        this.travelTimes.clear();
+        this.mMap.clear();
         new AsyncTask<Void,Void,Void>(){
 
             @Override
@@ -344,13 +347,19 @@ public class MainActivity extends AppCompatActivity implements
 
         this.userID = message.getUserID();
         this.brokerAddress = message.getBrokerAddress();
-        this.startReceiving();
+        if(!this.channelInitialized){
+            this.startReceiving();
+            this.channelInitialized=true;
+        }
+
         for (int j = 0; j < paths.size(); j++) {
             this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
         }
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
+            Log.i("PATH",paths.get(i).toString());
+            paths.get(i).printPath();
             String toSend = JSONMessagingUtils.getStringfromRequestTravelTimeMsg(requestMsg);
             MomUtils.sendMsg(factory, paths.get(i).getPathNodes().get(0).getNodeID(), toSend);
         }
@@ -366,12 +375,13 @@ public class MainActivity extends AppCompatActivity implements
         int time = message.getTravelTime();
         if(message.frozenDanger()){
             System.out.println("Frozen Danger on path number "+message.getTravelID());
-            }
-            this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
-            if(this.travelTimes.size()==this.pathsWithTravelID.size()){
-                this.chosenPath = this.evaluateBestPath();
-                this.requestCoordinates();
-                try {
+        }
+        this.travelTimes.add(new Pair<Integer, Integer>(this.travelID, time));
+        if(this.travelTimes.size()==this.pathsWithTravelID.size()){
+            System.out.println("TTIMES");
+            this.chosenPath = this.evaluateBestPath();
+            this.requestCoordinates();
+            try {
                     this.sendAckToNode();
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
@@ -413,7 +423,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void requestCoordinates(){
-
+        System.out.println("REQUEST COORD");
         new AsyncTask<Void,Void,Void>(){
 
             @Override
@@ -424,7 +434,7 @@ public class MainActivity extends AppCompatActivity implements
 
                     pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
                     handlePathAckMsg(HttpUtils.POST(pathAckString));
-
+                    System.out.println("MESSAGE REC");
                 } catch (JSONException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
@@ -435,6 +445,7 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             protected void onPostExecute(Void aVoid) {
+                Log.i("CLEAR MAP", "");
                 mMap.clear();
                 drawMarkersForPath(chosenPath, colorsArray[4]);
             }
