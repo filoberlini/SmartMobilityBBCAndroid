@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements
         this.pathsWithTravelID = new ArrayList<>();
         this.travelTimes = new ArrayList<>();
         this.currentIndex = 0;
+        this.userID = "newuser";
         transaction.commit();
         mapFragment.getMapAsync(this);
     }
@@ -166,31 +167,13 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void requestPaths(final IInfrastructureNode start, final IInfrastructureNode end) {
-        /*Vertx vertx = Vertx.vertx();
-        HttpClient client = vertx.createHttpClient();
-        client.websocket(8080, "localhost", "/some-uri", ws -> {
-            ws.handler(data -> {
-                System.out.println("Received data " + data.toString("ISO-8859-1"));
-                try {
-                    this.handleResponsePathMsg(data.toString());
-                } catch (JSONException | IOException | TimeoutException e) {
-                    e.printStackTrace();
-                }
-            });
-            IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, this.start, this.end);
-            try {
-                String requestPathString = JSONMessagingUtils.getStringfromRequestPathMsg(requestMsg);
-                ws.writeBinaryMessage(Buffer.buffer(requestPathString));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        });*/
+        this.pathsWithTravelID.clear();
         new AsyncTask<Void,Void,Void>(){
 
             @Override
             protected Void doInBackground(Void... voids) {
                 Log.i("","ASYNCH");
-                IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, start, end);
+                IRequestPathMsg requestMsg = new RequestPathMsg(MessagingUtils.REQUEST_PATH, start, end, userID);
                 try {
                     String requestPathString = JSONMessagingUtils.getStringfromRequestPathMsg(requestMsg);
                     handleResponsePathMsg(HttpUtils.POST(requestPathString));
@@ -430,26 +413,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void requestCoordinates(){
-        /*Vertx vertx = Vertx.vertx();
-        HttpClient client = vertx.createHttpClient();
 
-        client.websocket(8080, "localhost", "/some-uri", ws -> {
-            ws.handler(data -> {
-                System.out.println("Received data " + data.toString("ISO-8859-1"));
-                try {
-                    this.handlePathAckMsg(data.toString());
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            });
-            IPathAckMsg pathAckMsg = new PathAckMsg(this.userID, MessagingUtils.PATH_ACK, this.chosenPath, this.travelID);
-            try {
-                String pathAckString = JSONMessagingUtils.getStringfromPathAckMsg(pathAckMsg);
-                ws.writeBinaryMessage(Buffer.buffer(pathAckString));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        });*/
         new AsyncTask<Void,Void,Void>(){
 
             @Override

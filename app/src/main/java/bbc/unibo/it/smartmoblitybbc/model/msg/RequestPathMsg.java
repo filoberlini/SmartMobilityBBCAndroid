@@ -8,11 +8,13 @@ public class RequestPathMsg implements IRequestPathMsg {
 	private String msgId;
 	private IInfrastructureNode startingNode;
 	private IInfrastructureNode endingNode;
+	private String userID;
 	
-	public RequestPathMsg(String msgId, IInfrastructureNode startingNode, IInfrastructureNode endingNode){
+	public RequestPathMsg(String msgId, IInfrastructureNode startingNode, IInfrastructureNode endingNode, String userID){
 		this.msgId = msgId;
 		this.startingNode = startingNode;
 		this.endingNode = endingNode;
+		this.userID = userID;
 	}
 
 	@Override
@@ -30,4 +32,8 @@ public class RequestPathMsg implements IRequestPathMsg {
 		return this.endingNode;
 	}
 
+	@Override
+	public String getUserID() {
+		return this.userID;
+	}
 }
