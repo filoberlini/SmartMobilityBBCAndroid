@@ -408,11 +408,15 @@ public class MainActivity extends AppCompatActivity implements
             mMap.addMarker(new MarkerOptions()
                     .position(coord)
                     .icon(BitmapDescriptorFactory.defaultMarker(color)));
-            Polyline line = mMap.addPolyline(new PolylineOptions()
-                    .add(new LatLng(src.getCoordinates().getLatitude(), src.getCoordinates().getLongitude()), new LatLng(dest.getCoordinates().getLatitude(), dest.getCoordinates().getLongitude()))
-                    .width(2)
-                    .color(Color.BLUE).geodesic(true));
+            mMap.addPolyline(new PolylineOptions()
+                        .add(new LatLng(src.getCoordinates().getLatitude(), src.getCoordinates().getLongitude()), new LatLng(dest.getCoordinates().getLatitude(), dest.getCoordinates().getLongitude()))
+                        .width(5)
+                        .color(Color.BLUE).geodesic(true));
         }
+        IInfrastructureNode in = path.getPathNodes().get(path.getPathNodes().size()-1);
+        mMap.addMarker(new MarkerOptions()
+                .position(new LatLng(in.getCoordinates().getLatitude(),in.getCoordinates().getLongitude()))
+                .icon(BitmapDescriptorFactory.defaultMarker(color)));
 
     }
 
