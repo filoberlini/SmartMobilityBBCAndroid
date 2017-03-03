@@ -18,9 +18,7 @@ package bbc.unibo.it.smartmoblitybbc;
         import com.google.android.gms.maps.SupportMapFragment;
         import com.google.android.gms.maps.model.BitmapDescriptorFactory;
         import com.google.android.gms.maps.model.LatLng;
-        import com.google.android.gms.maps.model.Marker;
         import com.google.android.gms.maps.model.MarkerOptions;
-        import com.google.android.gms.maps.model.Polyline;
         import com.google.android.gms.maps.model.PolylineOptions;
         import com.rabbitmq.client.AMQP;
         import com.rabbitmq.client.Channel;
@@ -33,14 +31,12 @@ package bbc.unibo.it.smartmoblitybbc;
         import org.json.JSONException;
 
         import java.io.IOException;
-        import java.io.UnsupportedEncodingException;
         import java.util.ArrayList;
         import java.util.HashSet;
         import java.util.List;
         import java.util.concurrent.TimeoutException;
 
         import bbc.unibo.it.smartmoblitybbc.model.Coordinates;
-        import bbc.unibo.it.smartmoblitybbc.model.InfrastructureNode;
         import bbc.unibo.it.smartmoblitybbc.model.InfrastructureNodeImpl;
         import bbc.unibo.it.smartmoblitybbc.model.NodePath;
         import bbc.unibo.it.smartmoblitybbc.model.Pair;
@@ -81,13 +77,7 @@ public class MainActivity extends AppCompatActivity implements
     private InfrastructureNodeImpl end;
     private int currentIndex;
     private long timerValue;
-    private static final LatLng PERTH = new LatLng(-31.952854, 115.857342);
-    private static final LatLng SYDNEY = new LatLng(-33.87365, 151.20689);
-    private static final LatLng BRISBANE = new LatLng(-27.47093, 153.0235);
     private int pointsCounter = 0;
-    private Marker mPerth;
-    private Marker mSydney;
-    private Marker mBrisbane;
     private static final float colorsArray[] = {BitmapDescriptorFactory.HUE_AZURE, BitmapDescriptorFactory.HUE_GREEN,
             BitmapDescriptorFactory.HUE_MAGENTA, BitmapDescriptorFactory.HUE_YELLOW, BitmapDescriptorFactory.HUE_ORANGE};
     private static final double LAT_CENTER = 43.773663;
@@ -139,25 +129,6 @@ public class MainActivity extends AppCompatActivity implements
                                        }
 
         );
-
-        // Add some markers to the map, and add a data object to each marker.
-       /* mPerth = mMap.addMarker(new MarkerOptions()
-                .position(PERTH)
-                .title("Perth"));
-        mPerth.setTag(0);
-
-        mSydney = mMap.addMarker(new MarkerOptions()
-                .position(SYDNEY)
-                .title("Sydney"));
-        mSydney.setTag(0);
-
-        mBrisbane = mMap.addMarker(new MarkerOptions()
-                .position(BRISBANE)
-                .title("Brisbane"));
-        mBrisbane.setTag(0);
-
-        // Set a listener for marker click.
-        mMap.setOnMarkerClickListener(this);*/
     }
 
     private Channel initChannel() throws IOException, TimeoutException {
@@ -218,6 +189,7 @@ public class MainActivity extends AppCompatActivity implements
                 bestPath = p.getFirst();
             }
         }
+        this.timerValue = System.currentTimeMillis();
         this.travelID = minTravelID;
         return bestPath;
     }
@@ -250,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void switchArrivedMsg(String msg) throws UnsupportedEncodingException, IOException, TimeoutException {
+    private void switchArrivedMsg(String msg) throws IOException, TimeoutException {
         try {
             int n = MessagingUtils.getIntId(msg);
             Log.i("> Id "+n, msg);
@@ -288,75 +260,23 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void handleResponsePathMsg(String msg)
-            throws JSONException, UnsupportedEncodingException, IOException, TimeoutException {
+            throws JSONException, IOException, TimeoutException {
         System.out.println(msg);
         IResponsePathMsg message = JSONMessagingUtils.getResponsePathMsgFromString(msg);
         List<INodePath> paths;
         paths = message.getPaths();
-
-
-
-
-
-        /*IInfrastructureNode node = new InfrastructureNode("id1");
-        node.setCoordinates(new Coordinates(44.136940,12.242621));
-        IInfrastructureNode node1 = new InfrastructureNode("id2");
-        node1.setCoordinates(new Coordinates(44.138056,12.243367));
-        IInfrastructureNode node2 = new InfrastructureNode("id3");
-        node2.setCoordinates(new Coordinates(44.138643,12.243445));
-        IInfrastructureNode node3 = new InfrastructureNode("id4");
-        node3.setCoordinates(new Coordinates(44.139483,12.243859));
-        IInfrastructureNode node4 = new InfrastructureNode("id5");
-        node4.setCoordinates(new Coordinates(44.139533,12.243398));
-        IInfrastructureNode node5 = new InfrastructureNode("id6");
-        node5.setCoordinates(new Coordinates(44.137584,12.241318));
-        IInfrastructureNode node6 = new InfrastructureNode("id7");
-        node6.setCoordinates(new Coordinates(44.137734,12.241392));
-        IInfrastructureNode node7 = new InfrastructureNode("id8");
-        node7.setCoordinates(new Coordinates(44.138072,12.241626));
-        IInfrastructureNode node8 = new InfrastructureNode("id9");
-        node8.setCoordinates(new Coordinates(44.138051,12.242285));
-        IInfrastructureNode node9 = new InfrastructureNode("id10");
-        node9.setCoordinates(new Coordinates(44.138254,12.242317));
-        IInfrastructureNode node10 = new InfrastructureNode("id11");
-        node10.setCoordinates(new Coordinates(44.138868,12.242320));
-        IInfrastructureNode node11 = new InfrastructureNode("id12");
-        node11.setCoordinates(new Coordinates(44.139643,12.242515));
-        ArrayList<IInfrastructureNode> list = new ArrayList<>();
-        list.add(node);
-        list.add(node1);
-        list.add(node2);
-        list.add(node3);
-        list.add(node4);
-        INodePath path = new NodePath(list);
-        ArrayList<IInfrastructureNode> list2 = new ArrayList<>();
-        list2.add(node);
-        list2.add(node5);
-        list2.add(node6);
-        list2.add(node7);
-        list2.add(node8);
-        list2.add(node9);
-        list2.add(node10);
-        list2.add(node11);
-        INodePath path2 = new NodePath(list2);
-        List<INodePath> paths = new ArrayList<>();
-        paths.add(path);
-        paths.add(path2);*/
-
-
-
-
-
         this.userID = message.getUserID();
         this.brokerAddress = message.getBrokerAddress();
+        System.out.println(""+paths.size());
+        for (int j = 0; j < paths.size(); j++) {
+            this.pathsWithTravelID.add(new Pair<>(paths.get(j), j));
+            Log.i("TRAVEL ID "+j, paths.get(j).getStringPath());
+        }
         if(!this.channelInitialized){
             this.startReceiving();
             this.channelInitialized=true;
         }
 
-        for (int j = 0; j < paths.size(); j++) {
-            this.pathsWithTravelID.add(new Pair<INodePath, Integer>(paths.get(j), j));
-        }
         for (int i = 0; i < paths.size(); i++) {
             IRequestTravelTimeMsg requestMsg = new RequestTravelTimeMsg(userID, MessagingUtils.REQUEST_TRAVEL_TIME, 0,
                     paths.get(i), i, false);
@@ -388,19 +308,13 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void sendAckToNode() throws JSONException, UnsupportedEncodingException, IOException, TimeoutException{
+    private void sendAckToNode() throws JSONException, IOException, TimeoutException{
         IPathAckMsg ackMsgToNode = new PathAckMsg(this.userID, MessagingUtils.PATH_ACK, this.chosenPath, this.travelID);
         String ackToSend = JSONMessagingUtils.getStringfromPathAckMsg(ackMsgToNode);
         MomUtils.sendMsg(this.factory, this.chosenPath.getPathNodes().get(0).getNodeID(), ackToSend);
     }
 
     private void drawMarkersForPath(INodePath path, float color){
-        /*for(IInfrastructureNode node : path.getPathNodes()){
-            LatLng coord = new LatLng(node.getCoordinates().getLatitude(), node.getCoordinates().getLongitude());
-            mMap.addMarker(new MarkerOptions()
-                    .position(coord)
-                    .icon(BitmapDescriptorFactory.defaultMarker(color)));
-        }*/
         for(int i = 0; i < path.getPathNodes().size()-1; i++){
             IInfrastructureNode src = path.getPathNodes().get(i);
             IInfrastructureNode dest = path.getPathNodes().get(i+1);
@@ -475,6 +389,7 @@ public class MainActivity extends AppCompatActivity implements
                 ICoordinates coordinates = new Coordinates(location.getLatitude(), location.getLongitude());
                 if(chosenPath.getPathNodes().get(currentIndex+1).getCoordinates().isCloseEnough(coordinates)){
                     int time = (int) (System.currentTimeMillis()-timerValue);
+                    timerValue = System.currentTimeMillis();
                     ICoordinates c = chosenPath.getPathNodes().get(currentIndex+1).getCoordinates();
                     LatLng latLng = new LatLng(c.getLatitude(), c.getLongitude());
                     mMap.addMarker(new MarkerOptions().position(latLng)
@@ -489,7 +404,7 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void nearNextNode(int time) throws JSONException, UnsupportedEncodingException, IOException, TimeoutException{
+    private void nearNextNode(int time) throws JSONException, IOException, TimeoutException{
         ITravelTimeAckMsg msg = new TravelTimeAckMsg(this.userID, MessagingUtils.TRAVEL_TIME_ACK,
                 chosenPath.getPathNodes().get(this.currentIndex), this.chosenPath.getPathNodes().get(this.currentIndex + 1), time);
         String travelTimeAck = JSONMessagingUtils.getStringfromTravelTimeAckMsg(msg);

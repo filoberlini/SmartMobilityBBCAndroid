@@ -30,10 +30,20 @@ public class NodePath implements INodePath {
 
     @Override
     public void printPath(){
-        System.out.println("PATH:");
-        for(IInfrastructureNode node : this.pathNodes){
-            System.out.println("Node "+node.getNodeID());
+        String s = "";
+		for(IInfrastructureNode node : this.pathNodes){
+            s+=" "+node.getNodeID();
         }
+		System.out.println("PATH "+s);
     }
+
+	@Override
+	public String getStringPath() {
+		String s = "";
+		for(IInfrastructureNode node : this.pathNodes){
+			s+=" "+node.getNodeID();
+		}
+		return s;
+	}
 
 }

@@ -30,4 +30,9 @@ public interface INodePath {
 	 */
 	void printPath();
 
+	/**
+	 * method invoked to get a path in form of a String
+	 */
+	String getStringPath();
+
 }
